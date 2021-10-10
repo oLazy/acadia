@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/eric/Projects/acadia_interview/Objects.h
+utility
+-
+vector
+-
+cmath
+-
+ostream
+-
+random
+-
+
+/home/eric/Projects/acadia_interview/main.cpp
+iostream
+-
+Objects.h
+/home/eric/Projects/acadia_interview/Objects.h
+

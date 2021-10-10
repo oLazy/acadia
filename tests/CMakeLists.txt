@@ -1,0 +1,1 @@
+add_executable(run_tests unitTests.cpp)
