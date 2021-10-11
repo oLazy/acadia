@@ -92,6 +92,14 @@ struct Environment{
     double volatility{0};
     double riskFreeRate{0};
     double averageDividendsPerYear{0};
+    [[nodiscard]] Environment copy() const {
+        Environment res;
+        res.underlyingT0Price = this->underlyingT0Price;
+        res.volatility = this->volatility;
+        res.riskFreeRate = this->riskFreeRate;
+        res.averageDividendsPerYear = this->averageDividendsPerYear;
+        return res;
+    }
 };
 struct BinomialTreeNode{
     double underlyingValue{0};
@@ -123,7 +131,7 @@ public:
     static BinomialTree build(Environment const& e, Option const& o) {
         // Generate dividend structure
         std::poisson_distribution<int> dividendDistribution(e.averageDividendsPerYear/365.25);
-        std::vector<int> dividendStructure;
+        std::vector<int> dividendStructure(0);
         dividendStructure.push_back(0);
         for (int i=1; i<o.getTimeToMaturity()+1; i++){
             int noDividendsToday = dividendDistribution(generator);
@@ -171,6 +179,7 @@ private:
             dividendStructure(std::move(ds)){};
     void setEnvironment(Environment const& e){
         double volatility = e.volatility;
+        sigma = volatility;
         //volatility is the annualized volatility
         u = std::exp(volatility * std::sqrt(1. / 365.25)); // every time step is one day in a year
         d = 1/u;
@@ -179,7 +188,7 @@ private:
         t0underVal = e.underlyingT0Price; // underlying value at time 0. This is in env as is market info.
         riskNeutralP = (std::exp(dailyRate) - d)/(u-d);
         averageDividendsPerYear = e.averageDividendsPerYear;
-        this->simulateUnderlyingDynamics();
+        simulateUnderlyingDynamics();
     }
     void setOption(Option const& option){
         o=option;
@@ -196,12 +205,12 @@ private:
         double payed{0};
 
         tree[0][0].underlyingValue = t0underVal;
-        for (unsigned i = 1; i < N+1; i++){ // i is time index here
-            for (unsigned j = 0; j < i+1; j++){ // j is the number of times the values moved up
+        for (auto i = 1; i < N+1; i++){ // i is time index here
+            for (auto j = 0; j < i+1; j++){ // j is the number of times the values moved up
                 // this simulation does not depend on the iteration and can be parallelized.
                 // OMP and MPI are good candidates. CUDA makes sense only for huge simulations, as the comm time
                 // host/device is typically important
-                tree[i][j].underlyingValue = std::max(t0underVal*std::pow(u,j)*pow(d,i-j)-static_cast<double>(dividendCumSum[i])*dividendSize,0.); // cannot have stocks with negative price
+                tree[i][j].underlyingValue = std::max(t0underVal*std::pow(u,j)*pow(d,i-j)-static_cast<double>(dividendCumSum[i-1])*dividendSize,0.); // cannot have stocks with negative price
             }
         }
     }
@@ -225,17 +234,18 @@ private:
     }
 };
 /**
- * myUtilClass implements the program requirements. It makes explicit use of the classes defined so far
+ * myUtils implements the program requirements. It makes explicit use of the classes defined so far
  */
-class myUtilClass{
-public:
-    static double BSd1(Environment const& env, Option const& opt){
-        double d1 = (std::log(env.underlyingT0Price/opt.getStrike()) + 0.5*(env.riskFreeRate + std::pow(env.volatility,2))*opt.getTimeToMaturity()/365.25)/
+namespace myUtils{
+    double BSd1(Environment const& env, Option const& opt){
+        double d1 = (std::log(env.underlyingT0Price/opt.getStrike()) +
+                     (env.riskFreeRate + 0.5*std::pow(env.volatility,2))*
+                     opt.getTimeToMaturity()/365.25)/
                     (env.volatility*std::sqrt(opt.getTimeToMaturity()/365.25));
         return d1;
     }
 
-    static double computeDelta(BinomialTree const& model){
+    double computeDelta(BinomialTree const& model){
         // Hull chap. 11
         auto nodeD = model.getNode(1,0);
         auto nodeU = model.getNode(1,1);
@@ -243,18 +253,21 @@ public:
 
         return(nodeU.tradeValue-nodeD.tradeValue)/(S0* model.getU() - S0*model.getD());
     }
-    static double computeDelta(Environment const& env, Option const& opt, BinomialTree const& model){
+    double computeDelta(Environment const& env, Option const& opt, BinomialTree const& model){
         // compute Delta via central finite-differences
         double h = 0.01; // 1 USd is the typical sensitivity we are interested in
-        auto envM = env;
-        auto envP = env;
+        auto envM = env.copy();
+        auto envP = env.copy();
         envM.underlyingT0Price = env.underlyingT0Price-h;
         envP.underlyingT0Price = env.underlyingT0Price+h;
         auto pricingModelM = BinomialTree::build(envM,opt,model.getDividendStructure());
         auto pricingModelP = BinomialTree::build(envP,opt,model.getDividendStructure());
-        return (pricingModelP.getPrice()-pricingModelM.getPrice())/(2*h);
+        double priceP=pricingModelP.getPrice();
+        double priceM=pricingModelM.getPrice();
+        double delta{(priceP-priceM)/(2*h)};
+        return delta;
     }
-    static double computeTheta(Environment const& env, Option const& opt, BinomialTree const& model){
+    double computeTheta(Environment const& env, Option const& opt, BinomialTree const& model){
         // compute Theta via central finite-differences
         // NOTE on the signs: time to maturity and tenor have opposite signs.
         // This is the reason that lead the - on the option+ and the + in the option-
@@ -266,24 +279,35 @@ public:
         auto modelM = BinomialTree::build(env,oM,dividendStructure);
         return 0.5*(modelP.getPrice() - modelM.getPrice());
     }
-    static double computeGamma(Environment const& env, Option const& opt, BinomialTree const& model){
+    double computeGamma(Environment const& env, Option const& opt, BinomialTree const& model){
         // compute Gamma via central finite-differences
         double h = 0.01; // 1 USd is the typical sensitivity we are interested in
-        auto envM = env;
-        auto envP = env;
+        auto envM = env.copy();
+        auto envP = env.copy();
         envM.underlyingT0Price = env.underlyingT0Price-h;
         envP.underlyingT0Price = env.underlyingT0Price+h;
         auto pricingModelM = BinomialTree::build(envM,opt,model.getDividendStructure());
         auto pricingModelP = BinomialTree::build(envP,opt,model.getDividendStructure());
         return (pricingModelP.getPrice()+pricingModelM.getPrice()-(2*model.getPrice()))*pow(h,-2);
     }
-    static double computeVega(Environment const& env, Option const& opt, BinomialTree const& model){
+    double computeVega(Environment const& env, Option const& opt, BinomialTree const& model){
         // compute Vega via central finite-differences
         double h = 0.0001; // 0.01% yearly volatility
-        auto envM = env;
-        auto envP = env;
+        auto envM = env.copy();
+        auto envP = env.copy();
         envM.volatility = env.volatility-h;
         envP.volatility = env.volatility+h;
+        auto pricingModelM = BinomialTree::build(envM,opt,model.getDividendStructure());
+        auto pricingModelP = BinomialTree::build(envP,opt,model.getDividendStructure());
+        return (pricingModelP.getPrice()-pricingModelM.getPrice())/(2*h);
+    }
+    double computeRho(Environment const& env, Option const& opt, BinomialTree const& model){
+        // compute Vega via central finite-differences
+        double h = 0.0001; // 0.01% yearly rate
+        auto envM = env.copy();
+        auto envP = env.copy();
+        envM.riskFreeRate = env.riskFreeRate-h;
+        envP.riskFreeRate = env.riskFreeRate+h;
         auto pricingModelM = BinomialTree::build(envM,opt,model.getDividendStructure());
         auto pricingModelP = BinomialTree::build(envP,opt,model.getDividendStructure());
         return (pricingModelP.getPrice()-pricingModelM.getPrice())/(2*h);

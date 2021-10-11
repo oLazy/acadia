@@ -14,7 +14,50 @@
 #include <iostream>
 #include "Objects.h"
 int main() {
+    Option option1(60, 365, TradeType::European, CallPut::Call);
+    Environment env;
+    env.riskFreeRate = 5e-2;
+    env.underlyingT0Price = 60;
+    env.volatility = 0.10;
+    env.averageDividendsPerYear = 0;
+    std::vector<int> dividendStructure(option1.getTimeToMaturity());
+    BinomialTree model = BinomialTree::build(env, option1, dividendStructure);
+    double price = model.getPrice();
+    std::cout << "European Call - my NPV - BS price: " << price - 4.08 << "\n";
+    Option option2(60, 365, TradeType::European, CallPut::Put);
+    Environment env2;
+    env2.riskFreeRate = 5e-2;
+    env2.underlyingT0Price = 60;
+    env2.volatility = 0.10;
+    env2.averageDividendsPerYear = 0;
+    std::vector<int> dividendStructure2(option2.getTimeToMaturity());
+    BinomialTree model2 = BinomialTree::build(env2, option2, dividendStructure2);
+    double price2 = model2.getPrice();
+    std::cout << "European Put - my NPV - BS price: " << price2 - 1.16 << "\n";
+    Option option3(60, 365, TradeType::American, CallPut::Call);
+    BinomialTree model3 = BinomialTree::build(env, option3, dividendStructure);
+    double price3 = model3.getPrice();
+    std::cout << "American Call - my NPV - BS price: " << price3 - 4.08 << "\n";
+    Option option4(60, 365, TradeType::American, CallPut::Put);
+    BinomialTree model4 = BinomialTree::build(env2, option4, dividendStructure2);
+    double price4 = model4.getPrice();
+    if(price4>=price2)std::cout << "American Put makes sense\n";
 
+    std::cout << "===========================================\n";
+    // compute Delta from model. Two ways
+    auto deltaBT{myUtils::computeDelta(model)};
+    auto deltaFD{myUtils::computeDelta(env,option1,model)};
+    // compute Delta from BS
+    auto deltaBS{normalCDF( myUtils::BSd1(env,option1) )};
+    std::cout << "E Call: Delta binomial tree - analytical: " << deltaBT - deltaBS << "\n";
+    std::cout << "E Call: Delta central differences - analytical: " << deltaFD - deltaBS << "\n";
+    deltaBT = myUtils::computeDelta(model2);
+    deltaFD = myUtils::computeDelta(env2,option2,model2);
+    deltaBS = - normalCDF( - myUtils::BSd1(env,option2) );
+    std::cout << "E Put: Delta binomial tree - analytical: " << deltaBT - deltaBS << "\n";
+    std::cout << "E Put: Delta central differences - analytical: " << deltaFD - deltaBS << "\n";
+    return 0;
+    /*
     unsigned long seed=13;
     generator.seed(seed);
     Environment env;
@@ -25,15 +68,15 @@ int main() {
 
     Option derivative(60,365,TradeType::European,CallPut::Call);
     auto pricingModel = BinomialTree::build(env,derivative);
-    auto delta1 = myUtilClass::computeDelta(pricingModel);
+    auto delta1 = myUtils::computeDelta(pricingModel);
     std::cout << "trade price = " << pricingModel.getNode(0,0).tradeValue << std::endl;
     std::cout << "Delta  1 = " << delta1 << "\n";
     double deltaAnalytical;
     // compute Delta for a European with no dividends using BS formula
     if(derivative.getCallPut()==CallPut::Call){
-        deltaAnalytical = normalCDF(myUtilClass::BSd1(env,derivative));
+        deltaAnalytical = normalCDF(myUtils::BSd1(env, derivative));
     }else{
-        deltaAnalytical = normalCDF(myUtilClass::BSd1(env,derivative))-1;
+        deltaAnalytical = normalCDF(myUtils::BSd1(env, derivative)) - 1;
     }
     std::cout << "Delta for a European trade which does not yield dividend is " << deltaAnalytical <<"\n";
 
@@ -49,14 +92,14 @@ int main() {
     auto deltaT = (pricingModelP.getPrice()-pricingModelM.getPrice())/(2*h);
     std::cout << "Delta test = " << deltaT << "\n";
     std::cout << "log10(abs(Delta test - delta)): " << std::log10(std::abs(deltaT-delta1)) << "\n";
-    std::cout << "Delta = " << myUtilClass::computeDelta(env,derivative,pricingModel) << "\n";
-    std::cout << "Theta = " << myUtilClass::computeTheta(env,derivative,pricingModel) << "\n";
-    std::cout << "Gamma = " << myUtilClass::computeGamma(env,derivative,pricingModel) << "\n";
-    std::cout << "Vega  = " << myUtilClass::computeVega(env,derivative,pricingModel) << "\n";
+    std::cout << "Delta = " << myUtils::computeDelta(env, derivative, pricingModel) << "\n";
+    std::cout << "Theta = " << myUtils::computeTheta(env, derivative, pricingModel) << "\n";
+    std::cout << "Gamma = " << myUtils::computeGamma(env, derivative, pricingModel) << "\n";
+    std::cout << "Vega  = " << myUtils::computeVega(env, derivative, pricingModel) << "\n";
 //    double greekTest =
-//    myUtilClass::computeTheta(env,derivative,pricingModel) + // theta
-//    env.riskFreeRate*env.underlyingT0Price*myUtilClass::computeDelta(env,derivative,pricingModel) + //rSDelta
-//    0.5*std::pow(env.volatility,2)*std::pow(env.underlyingT0Price,2)*myUtilClass::computeGamma(env,derivative,pricingModel) - //1/2sigma^2S^2Gamma
+//    myUtils::computeTheta(env,derivative,pricingModel) + // theta
+//    env.riskFreeRate*env.underlyingT0Price*myUtils::computeDelta(env,derivative,pricingModel) + //rSDelta
+//    0.5*std::pow(env.volatility,2)*std::pow(env.underlyingT0Price,2)*myUtils::computeGamma(env,derivative,pricingModel) - //1/2sigma^2S^2Gamma
 //    env.riskFreeRate*pricingModel.getPrice();//rPi ==> Hull pag. 359
 //    std::cout << "greekTest " << greekTest << "\n";
 
@@ -66,4 +109,5 @@ int main() {
 //        std::cout << x << "; " << normalCDF(x) << "\n";
 //    }
     return 0;
-}
+*/
+     }

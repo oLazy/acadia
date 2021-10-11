@@ -6,8 +6,8 @@
 #include "../Objects.h"
 
 TEST_CASE("Options price tests", "[American][European][Call][Put]"){
-    Option option(40, 365, TradeType::European, CallPut::Call);
     SECTION( "Option object functionality" ) {
+        Option option(40, 365, TradeType::European, CallPut::Call);
         REQUIRE(option.getStrike() == 40);
         REQUIRE(option.getTimeToMaturity() == 365);
         REQUIRE(option.getCallPut() == CallPut::Call);
@@ -37,7 +37,7 @@ TEST_CASE("Options price tests", "[American][European][Call][Put]"){
         env.underlyingT0Price = 60;
         env.volatility = 0.10;
         env.averageDividendsPerYear = 0;
-        std::vector<int> dividendStructure(option.getTimeToMaturity());
+        std::vector<int> dividendStructure(option2.getTimeToMaturity());
         BinomialTree model = BinomialTree::build(env, option2, dividendStructure);
         double price = model.getPrice();
         REQUIRE(price-1.16 < 1e-2); // From B-S
@@ -79,7 +79,7 @@ TEST_CASE("Options price tests", "[American][European][Call][Put]"){
         env.volatility = 0.10;
         env.averageDividendsPerYear = 0;
         std::vector<int> dividendStructure(option.getTimeToMaturity());
-        dividendStructure[1] = 1;
+        dividendStructure[0] = 1;
         BinomialTree model = BinomialTree::build(env, option, dividendStructure);
         double underlyingPriceT1U = env.underlyingT0Price * model.getU() - 0.1*env.underlyingT0Price;
         double underlyingPriceT2UD = env.underlyingT0Price * model.getU() * model.getD() - 0.1*env.underlyingT0Price;
@@ -96,12 +96,73 @@ TEST_CASE("Greek tests", "[Greeks]"){
         env.underlyingT0Price = 100;
         env.volatility = 0.20;
         env.averageDividendsPerYear = 0;
-        Option option(60,91,TradeType::European,CallPut::Call);
+        Option option(60,3,TradeType::European,CallPut::Call);
         std::vector<int> dividendStructure(option.getTimeToMaturity());
         auto pricingModel = BinomialTree::build(env,option,dividendStructure);
-        auto delta = myUtilClass::computeDelta(pricingModel);
-        auto deltaFD = myUtilClass::computeDelta(env,option,pricingModel);
-        REQUIRE ((delta - deltaFD)/(delta+deltaFD) < 0.01);
+        auto delta = myUtils::computeDelta(pricingModel);
+        auto deltaFD = myUtils::computeDelta(env, option, pricingModel);
+        double diff{delta-deltaFD};
+        double adiff{std::abs(diff)};
+        REQUIRE (adiff < 0.01);
+
+    }
+
+    SECTION ( "Delta is correct for European Call" ){
+        Environment env;
+        env.riskFreeRate = 1e-2;
+        env.underlyingT0Price = 100;
+        env.volatility = 0.20;
+        env.averageDividendsPerYear = 0;
+        Option option(60,365,TradeType::European,CallPut::Call);
+        std::vector<int> dividendStructure(option.getTimeToMaturity());
+        auto pricingModel = BinomialTree::build(env,option,dividendStructure);
+        auto deltaFD = myUtils::computeDelta(env, option, pricingModel);
+        auto deltaA = normalCDF(myUtils::BSd1(env, option));
+        auto diff = deltaA - deltaFD;
+        REQUIRE ( std::abs( diff ) < 0.01);
+    }
+
+
+    SECTION ( "Delta is correct for European Put" ){
+        Environment env;
+        env.riskFreeRate = 5e-2;
+        env.underlyingT0Price = 60;
+        env.volatility = 0.10;
+        env.averageDividendsPerYear = 0;
+        Option option(60,365,TradeType::European,CallPut::Put);
+        std::vector<int> dividendStructure(option.getTimeToMaturity());
+        auto pricingModel = BinomialTree::build(env,option,dividendStructure);
+        auto deltaFD = myUtils::computeDelta(env, option, pricingModel);
+        auto deltaA = -normalCDF(-myUtils::BSd1(env, option));
+        auto diff = deltaA - deltaFD;
+        REQUIRE ( std::abs( diff ) < 0.01);
+    }
+
+    SECTION ( "Delta is correct for American Call"){
+        Environment env;
+        env.riskFreeRate = 1e-2;
+        env.underlyingT0Price = 100;
+        env.volatility = 0.20;
+        env.averageDividendsPerYear = 0;
+        Option option(60,365,TradeType::American,CallPut::Call);
+        std::vector<int> dividendStructure(option.getTimeToMaturity());
+        auto pricingModel = BinomialTree::build(env,option,dividendStructure);
+        auto deltaFD = myUtils::computeDelta(env, option, pricingModel);
+        auto deltaA = normalCDF(myUtils::BSd1(env, option));
+        auto diff = deltaA - deltaFD;
+        REQUIRE ( std::abs( diff ) < 0.01);
+    }
+    SECTION ("Can compute Theta via FD, and it makes sense"){
+        Environment env;
+        env.riskFreeRate = 1e-2;
+        env.underlyingT0Price = 100;
+        env.volatility = 0.20;
+        env.averageDividendsPerYear = 0;
+        Option option(60,365,TradeType::American,CallPut::Call);
+        std::vector<int> dividendStructure(option.getTimeToMaturity());
+        auto pricingModel = BinomialTree::build(env,option,dividendStructure);
+        auto theta = myUtils::computeTheta(env, option, pricingModel);
+        REQUIRE(theta<0.);
     }
 }
 
