@@ -1,0 +1,14 @@
+#market data to run the program
+risk-free-rate=5e-2
+S-T0-Price=60
+volatility=2e-1
+average-dividends-per-year=0.
+#
+# Trade details section
+#
+#  positive callput for a call, negative for a put
+callput=-1.
+#positive european for European Option, negative for American
+european=1.
+strike=60
+days-to-maturity=365
