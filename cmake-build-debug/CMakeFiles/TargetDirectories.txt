@@ -1,6 +1,0 @@
-/home/eric/Projects/acadia_interview/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/eric/Projects/acadia_interview/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/eric/Projects/acadia_interview/cmake-build-debug/CMakeFiles/acadia_interview.dir
-/home/eric/Projects/acadia_interview/cmake-build-debug/tests/CMakeFiles/rebuild_cache.dir
-/home/eric/Projects/acadia_interview/cmake-build-debug/tests/CMakeFiles/edit_cache.dir
-/home/eric/Projects/acadia_interview/cmake-build-debug/tests/CMakeFiles/run_tests.dir

@@ -1,4 +1,0 @@
-/snap/clion/164/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/eric/Projects/acadia_interview
--- Configuring done
--- Generating done
--- Build files have been written to: /home/eric/Projects/acadia_interview/cmake-build-debug
