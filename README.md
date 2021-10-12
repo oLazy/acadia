@@ -1,4 +1,5 @@
 #B-TWE
+
 Binary-Tree working example (B-TWE) is a dummy project.
 It mocks some functionalities of a binary-tree model to price Stock based derivative contracts, particularly:
 * European options (put and call)
