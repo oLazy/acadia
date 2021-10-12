@@ -296,7 +296,7 @@ namespace myUtils{
     }
     double computeVega(Environment const& env, Option const& opt, BinomialTree const& model){
         // compute Vega via central finite-differences
-        double h = 0.0001; // 0.01% yearly volatility
+        double h = env.volatility*0.01; // 0.01% yearly volatility
         auto envM = env.copy();
         auto envP = env.copy();
         envM.volatility = env.volatility-h;
@@ -306,8 +306,8 @@ namespace myUtils{
         return (pricingModelP.getPrice()-pricingModelM.getPrice())/(2*h);
     }
     double computeRho(Environment const& env, Option const& opt, BinomialTree const& model){
-        // compute Vega via central finite-differences
-        double h = 0.0001; // 0.01% yearly rate
+        // compute Rho via central finite-differences
+        double h = env.riskFreeRate*0.01; // 0.01% yearly rate
         auto envM = env.copy();
         auto envP = env.copy();
         envM.riskFreeRate = env.riskFreeRate-h;
