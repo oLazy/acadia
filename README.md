@@ -5,10 +5,10 @@ It mocks some functionalities of a binary-tree model to price Stock based deriva
 * European options (put and call)
 * American options (put and call)
 
-The underlying stock can yield dividends both continuously and via event-generation from Poisson distribution with defined metric.
+The underlying stock can yield dividends both continuously and via event-generation from Poisson distribution with defined mean number of events per year.
 
 B-TWE doesn't make use of external libraries on its own, but the [catch2](https://github.com/catchorg/Catch2) testing framework has been added to help testing fundamental functionalities and catch bugs.
-##What it does
+## What it does
 It reads option derivative contract and market conditions from an input file and compute the price of the option and the delta.
 It also computes the other Greeks. 
 ## How it does it
