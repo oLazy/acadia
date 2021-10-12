@@ -92,12 +92,14 @@ struct Environment{
     double volatility{0};
     double riskFreeRate{0};
     double averageDividendsPerYear{0};
+    double q{0};
     [[nodiscard]] Environment copy() const {
         Environment res;
         res.underlyingT0Price = this->underlyingT0Price;
         res.volatility = this->volatility;
         res.riskFreeRate = this->riskFreeRate;
         res.averageDividendsPerYear = this->averageDividendsPerYear;
+        res.q = this->q;
         return res;
     }
 };
@@ -113,7 +115,7 @@ class BinomialTree{
 private:
     std::vector<std::vector<BinomialTreeNode>> tree;
     const unsigned N;
-    double u{0}, d{0}, r{0}, dailyRate{0}, t0underVal{0}, sigma{0}, riskNeutralP{0}, averageDividendsPerYear{0};
+    double u{0}, d{0}, r{0}, dailyRate{0}, t0underVal{0}, sigma{0}, riskNeutralP{0}, averageDividendsPerYear{0}, q{0}, dailyDividend{0};
     Option o;
     std::vector<int> const dividendStructure;
 public:
@@ -185,8 +187,10 @@ private:
         d = 1/u;
         r = e.riskFreeRate; // yearly risk-free rate
         dailyRate = r/365.25;
+        q = e.q;
+        dailyDividend = q/365.25;
         t0underVal = e.underlyingT0Price; // underlying value at time 0. This is in env as is market info.
-        riskNeutralP = (std::exp(dailyRate) - d)/(u-d);
+        riskNeutralP = (std::exp(dailyRate-dailyDividend) - d)/(u-d);
         averageDividendsPerYear = e.averageDividendsPerYear;
         simulateUnderlyingDynamics();
     }
@@ -239,7 +243,7 @@ private:
 namespace myUtils{
     double BSd1(Environment const& env, Option const& opt){
         double d1 = (std::log(env.underlyingT0Price/opt.getStrike()) +
-                     (env.riskFreeRate + 0.5*std::pow(env.volatility,2))*
+                     (env.riskFreeRate -env.q + 0.5*std::pow(env.volatility,2))*
                      opt.getTimeToMaturity()/365.25)/
                     (env.volatility*std::sqrt(opt.getTimeToMaturity()/365.25));
         return d1;

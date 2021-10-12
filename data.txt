@@ -3,6 +3,7 @@ risk-free-rate=5e-2
 S-T0-Price=60
 volatility=2e-1
 average-dividends-per-year=0.
+continuously-yield-dividend=0.1
 #
 # Trade details section
 #

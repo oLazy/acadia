@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     myenv.underlyingT0Price = data["S-T0-Price"];
     myenv.volatility = data["volatility"];
     myenv.averageDividendsPerYear = data["average-dividends-per-year"];
-
+    myenv.q=data["continuously-yield-dividend"];
     CallPut callPut;
     TradeType type;
     (data["callput"]>0.)?callPut=CallPut::Call:callPut=CallPut::Put;
