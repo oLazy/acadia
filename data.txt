@@ -1,4 +1,5 @@
 #market data to run the program
+#rate are assumed to be annualised, all is quoted in USD.
 risk-free-rate=5e-2
 S-T0-Price=60
 volatility=2e-1
