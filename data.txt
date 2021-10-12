@@ -9,6 +9,6 @@ average-dividends-per-year=0.
 #  positive callput for a call, negative for a put
 callput=-1.
 #positive european for European Option, negative for American
-european=1.
+european=-1.
 strike=60
 days-to-maturity=365
